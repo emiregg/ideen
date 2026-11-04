@@ -99,8 +99,7 @@ main { padding-block: 20px 80px; }
 .floor:first-child { border-top: 0; }
 .floor .fl { background: var(--accent-soft); color: var(--accent); font-weight: 600; font-size: 14px; padding: 10px 12px; font-family: var(--f-ui); }
 .floor ul { margin: 0; padding: 10px 14px; list-style: none; display: flex; flex-wrap: wrap; gap: 2px 14px; font-family: var(--f-text); font-size: 16px; }
-.floor li { position: relative; }
-.floor li + li::before { content: "·"; position: absolute; left: -10px; color: var(--muted); }
+.floor li::before { content: "–"; margin-right: 6px; color: var(--muted); }
 @media (max-width: 520px) { .floor { grid-template-columns: minmax(0,1fr); } .floor .fl { padding: 6px 12px; } }
 
 .ads { display: grid; grid-template-columns: repeat(2, minmax(0,1fr)); gap: 12px; }
@@ -223,7 +222,7 @@ main { padding-block: 20px 80px; }
   const esc = s => String(s).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
 
   // Turn a German string into tappable word spans
-  const TOKEN = /([A-Za-zÄÖÜäöüß]+)/g;
+  const TOKEN = /([A-Za-zÀ-ÖØ-öø-ÿ]+)/g;
   function wz(text) {
     return String(text).split(TOKEN).map((part, i) => {
       if (i % 2 === 0) return esc(part);
@@ -401,7 +400,7 @@ main { padding-block: 20px 80px; }
       ${w.en ? `<div class="row"><span class="lang">en</span><span>${esc(w.en)}</span></div>` : ""}
       ${w.tr ? `<div class="row"><span class="lang">tr</span><span>${esc(w.tr)}</span></div>` : ""}
       ${w.def ? `<div class="def">${esc(w.def)}</div>` : ""}
-      <span class="tag ${w.a2 ? "" : "off"}">${w.a2 ? "Goethe A2 Wortliste" : "nicht in der A2-Liste"}</span>`;
+      ${w.a2 ? `<span class="tag">Goethe A2 Wortliste</span>` : ""}`;
     pop.hidden = false;
     const r = el.getBoundingClientRect();
     const pw = pop.offsetWidth, ph = pop.offsetHeight;
