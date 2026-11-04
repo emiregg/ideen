@@ -1,0 +1,453 @@
+<title>A2 Lesen Training</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Source+Serif+4:ital,opsz,wght@0,8..60,400;0,8..60,600;0,8..60,700;1,8..60,400&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@500&display=swap">
+<style>
+/* Layout: exam booklet. Sticky test/Teil bar on top, then one Teil at a time: reading material beside the answer sheet (stacks on phones). */
+:root {
+  --paper: #f7f8f6;
+  --sheet: #ffffff;
+  --ink: #1d2430;
+  --muted: #5d6675;
+  --line: #d9ddd8;
+  --accent: #23508f;
+  --accent-soft: #e5edf8;
+  --mark: #fff0a3;
+  --mark-ink: #1d2430;
+  --good: #1f7a4a;
+  --good-soft: #e3f3ea;
+  --bad: #b3372f;
+  --bad-soft: #f9e4e2;
+  --shadow: 0 1px 2px rgba(20,30,50,.06), 0 8px 24px rgba(20,30,50,.08);
+  --f-text: "Source Serif 4", Georgia, "Times New Roman", serif;
+  --f-ui: "IBM Plex Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --f-mono: "IBM Plex Mono", ui-monospace, Menlo, Consolas, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --paper: #13171d; --sheet: #1b2028; --ink: #e6e9ee; --muted: #9aa3b1; --line: #2f3642;
+    --accent: #8fb4ec; --accent-soft: #23314a; --mark: #5c5121; --mark-ink: #fff6cc;
+    --good: #6fcf97; --good-soft: #193526; --bad: #f08a80; --bad-soft: #3e2220;
+    --shadow: 0 1px 2px rgba(0,0,0,.3), 0 8px 24px rgba(0,0,0,.35);
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --paper: #13171d; --sheet: #1b2028; --ink: #e6e9ee; --muted: #9aa3b1; --line: #2f3642;
+  --accent: #8fb4ec; --accent-soft: #23314a; --mark: #5c5121; --mark-ink: #fff6cc;
+  --good: #6fcf97; --good-soft: #193526; --bad: #f08a80; --bad-soft: #3e2220;
+  --shadow: 0 1px 2px rgba(0,0,0,.3), 0 8px 24px rgba(0,0,0,.35);
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+body { background: var(--paper); color: var(--ink); font-family: var(--f-ui); font-size: 15px; line-height: 1.5; }
+body::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-area-inset-top, 0px); z-index: 10; background: var(--sheet); }
+button { font: inherit; color: inherit; }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+.wrap { max-width: 1120px; margin: 0 auto; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
+
+/* top bar */
+.bar { position: sticky; top: env(safe-area-inset-top, 0px); z-index: 5; background: var(--sheet); border-bottom: 1px solid var(--line); }
+.bar .wrap { display: flex; flex-direction: column; gap: 10px; padding-block: 12px 0; }
+.brand { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+.brand h1 { font-family: var(--f-text); font-size: 20px; font-weight: 700; margin: 0; letter-spacing: -.01em; }
+.brand h1 span { color: var(--muted); font-weight: 400; }
+.score { font-family: var(--f-mono); font-size: 13px; color: var(--muted); font-variant-numeric: tabular-nums; }
+.score b { color: var(--ink); }
+.tests { display: flex; gap: 8px; overflow-x: auto; scrollbar-width: none; }
+.tests::-webkit-scrollbar { display: none; }
+.test-btn { flex: 0 0 auto; border: 1px solid var(--line); background: var(--paper); border-radius: 8px; padding: 6px 12px; cursor: pointer; text-align: left; display: grid; gap: 2px; }
+.test-btn .t { font-weight: 600; font-size: 14px; }
+.test-btn .l { font-size: 12px; color: var(--muted); display: flex; align-items: center; gap: 6px; }
+.dots { display: inline-flex; gap: 3px; }
+.dots i { width: 6px; height: 6px; border-radius: 50%; background: var(--line); }
+.dots i.on { background: var(--accent); }
+.test-btn[aria-pressed="true"] { border-color: var(--accent); background: var(--accent-soft); }
+.teile { display: flex; gap: 0; overflow-x: auto; scrollbar-width: none; }
+.teile::-webkit-scrollbar { display: none; }
+.teil-btn { flex: 0 0 auto; border: 0; background: none; padding: 10px 14px; cursor: pointer; font-weight: 500; color: var(--muted); border-bottom: 3px solid transparent; display: flex; gap: 8px; align-items: center; }
+.teil-btn small { font-family: var(--f-mono); font-size: 11px; }
+.teil-btn[aria-selected="true"] { color: var(--ink); border-bottom-color: var(--accent); }
+.teil-btn .res { font-family: var(--f-mono); font-size: 11px; padding: 1px 6px; border-radius: 99px; background: var(--accent-soft); color: var(--accent); }
+
+main { padding-block: 20px 80px; }
+.head { display: flex; flex-direction: column; gap: 4px; margin-bottom: 16px; }
+.eyebrow { font-size: 12px; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); font-weight: 600; }
+.instruction { font-family: var(--f-text); font-size: 16px; margin: 0; max-width: 70ch; }
+.hint { font-size: 13px; color: var(--muted); margin: 4px 0 0; }
+
+.cols { display: grid; grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr); gap: 20px; align-items: start; }
+@media (max-width: 860px) { .cols { grid-template-columns: minmax(0,1fr); } }
+
+.sheet { background: var(--sheet); border: 1px solid var(--line); border-radius: 10px; padding: 22px 24px; min-width: 0; }
+@media (max-width: 520px) { .sheet { padding: 18px 16px; } }
+
+/* reading material */
+.reading { font-family: var(--f-text); font-size: 17px; line-height: 1.65; }
+.reading p { margin: 0 0 .9em; max-width: 65ch; }
+.source { font-family: var(--f-ui); font-size: 12px; color: var(--muted); text-transform: uppercase; letter-spacing: .06em; margin-bottom: 6px; }
+.headline { font-family: var(--f-text); font-size: 24px; line-height: 1.25; font-weight: 700; margin: 0 0 14px; text-wrap: balance; }
+.mail-head { font-family: var(--f-ui); font-size: 14px; border-bottom: 1px solid var(--line); padding-bottom: 10px; margin-bottom: 14px; display: grid; grid-template-columns: auto minmax(0,1fr); gap: 2px 12px; }
+.mail-head dt { color: var(--muted); }
+.mail-head dd { margin: 0; overflow-wrap: anywhere; }
+
+.board-title { font-family: var(--f-text); font-weight: 700; font-size: 20px; margin: 0 0 12px; text-align: center; }
+.board { display: grid; gap: 0; border: 1px solid var(--line); border-radius: 8px; overflow: hidden; }
+.floor { display: grid; grid-template-columns: 120px minmax(0,1fr); border-top: 1px solid var(--line); }
+.floor:first-child { border-top: 0; }
+.floor .fl { background: var(--accent-soft); color: var(--accent); font-weight: 600; font-size: 14px; padding: 10px 12px; font-family: var(--f-ui); }
+.floor ul { margin: 0; padding: 10px 14px; list-style: none; display: flex; flex-wrap: wrap; gap: 2px 14px; font-family: var(--f-text); font-size: 16px; }
+.floor li { position: relative; }
+.floor li + li::before { content: "·"; position: absolute; left: -10px; color: var(--muted); }
+@media (max-width: 520px) { .floor { grid-template-columns: minmax(0,1fr); } .floor .fl { padding: 6px 12px; } }
+
+.ads { display: grid; grid-template-columns: repeat(2, minmax(0,1fr)); gap: 12px; }
+@media (max-width: 600px) { .ads { grid-template-columns: minmax(0,1fr); } }
+.ad { border: 1px solid var(--line); border-radius: 8px; padding: 12px 14px; display: grid; gap: 4px; align-content: start; }
+.ad-id { font-family: var(--f-mono); font-size: 13px; color: var(--accent); }
+.ad h3 { margin: 0; font-family: var(--f-text); font-size: 17px; font-weight: 700; }
+.ad p { margin: 0; font-family: var(--f-text); font-size: 15.5px; line-height: 1.5; }
+
+/* answer sheet */
+.answers { display: grid; gap: 18px; }
+.answers h2 { margin: 0; font-size: 13px; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); font-weight: 600; }
+.item { display: grid; gap: 8px; }
+.item .q { display: grid; grid-template-columns: 28px minmax(0,1fr); gap: 6px; font-family: var(--f-text); font-size: 16.5px; line-height: 1.45; }
+.num { font-family: var(--f-mono); font-size: 14px; color: var(--accent); padding-top: 2px; }
+.opts { display: grid; gap: 6px; padding-left: 34px; }
+.opt { display: grid; grid-template-columns: 32px minmax(0,1fr); gap: 10px; align-items: start; font-family: var(--f-text); font-size: 16px; padding: 4px 6px 4px 0; border-radius: 6px; }
+.box { width: 30px; height: 30px; border: 1.5px solid var(--muted); border-radius: 4px; background: var(--sheet); cursor: pointer; display: grid; place-items: center; font-family: var(--f-mono); font-size: 13px; color: var(--muted); position: relative; padding: 0; }
+.box:hover { border-color: var(--accent); color: var(--accent); }
+.box[aria-checked="true"] { border-color: var(--accent); color: transparent; }
+.box[aria-checked="true"]::before, .box[aria-checked="true"]::after { content: ""; position: absolute; width: 22px; height: 2.5px; background: var(--accent); border-radius: 2px; }
+.box[aria-checked="true"]::before { transform: rotate(45deg); }
+.box[aria-checked="true"]::after { transform: rotate(-45deg); }
+.opt .ot { padding-top: 3px; }
+.opt.right { background: var(--good-soft); }
+.opt.right .box { border-color: var(--good); }
+.opt.wrong { background: var(--bad-soft); }
+.opt.wrong .box { border-color: var(--bad); }
+.opt.wrong .box::before, .opt.wrong .box::after { background: var(--bad); }
+.opt.right .box[aria-checked="true"]::before, .opt.right .box[aria-checked="true"]::after { background: var(--good); }
+
+.boxrow { display: flex; flex-wrap: wrap; gap: 6px; padding-left: 34px; }
+.boxrow .box { color: var(--ink); }
+.boxrow .box[aria-checked="true"] { color: transparent; }
+.boxrow .box.right { border-color: var(--good); background: var(--good-soft); }
+.boxrow .box.right[aria-checked="true"]::before, .boxrow .box.right[aria-checked="true"]::after { background: var(--good); }
+.boxrow .box.wrong { border-color: var(--bad); background: var(--bad-soft); }
+.boxrow .box.wrong::before, .boxrow .box.wrong::after { background: var(--bad); }
+
+.verdict { font-size: 13px; padding-left: 34px; font-weight: 500; }
+.verdict.ok { color: var(--good); }
+.verdict.no { color: var(--bad); }
+
+.actions { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; border-top: 1px solid var(--line); padding-top: 16px; }
+.btn { border: 1px solid var(--accent); background: var(--accent); color: var(--sheet); padding: 9px 16px; border-radius: 8px; font-weight: 600; cursor: pointer; }
+.btn.ghost { background: transparent; color: var(--accent); }
+.btn:disabled { opacity: .5; cursor: default; }
+.actions .msg { font-size: 14px; color: var(--muted); }
+.actions .msg b { color: var(--ink); font-family: var(--f-mono); font-weight: 500; }
+
+/* tappable words */
+.w { cursor: pointer; border-radius: 3px; transition: background-color .12s; -webkit-tap-highlight-color: transparent; }
+.w:hover { background: var(--accent-soft); }
+.w.active { background: var(--mark); color: var(--mark-ink); }
+.w.nf { cursor: default; }
+.w.nf:hover { background: none; }
+
+/* word popover */
+.pop { position: absolute; z-index: 20; width: min(320px, calc(100vw - 32px)); background: var(--sheet); border: 1px solid var(--line); border-radius: 10px; box-shadow: var(--shadow); padding: 14px 16px; display: grid; gap: 8px; font-family: var(--f-ui); }
+.pop .lemma { font-family: var(--f-text); font-size: 19px; font-weight: 700; line-height: 1.25; padding-right: 28px; }
+.pop .row { display: grid; grid-template-columns: 26px minmax(0,1fr); gap: 8px; font-size: 15px; align-items: baseline; }
+.pop .lang { font-family: var(--f-mono); font-size: 11px; color: var(--muted); text-transform: uppercase; }
+.pop .def { font-family: var(--f-text); font-style: italic; font-size: 15px; color: var(--muted); border-top: 1px solid var(--line); padding-top: 8px; }
+.pop .tag { justify-self: start; font-size: 11px; font-weight: 600; letter-spacing: .04em; padding: 2px 8px; border-radius: 99px; background: var(--accent-soft); color: var(--accent); }
+.pop .tag.off { background: var(--paper); color: var(--muted); }
+.pop .x { position: absolute; top: 8px; right: 8px; width: 28px; height: 28px; border: 0; background: none; cursor: pointer; color: var(--muted); font-size: 18px; border-radius: 6px; }
+.pop .x:hover { background: var(--paper); }
+
+.empty { text-align: center; color: var(--muted); padding: 60px 0; font-family: var(--f-text); font-size: 17px; }
+
+@media (prefers-reduced-motion: reduce) { .w { transition: none; } }
+</style>
+
+<header class="bar">
+  <div class="wrap">
+    <div class="brand">
+      <h1>A2 Lesen <span>· Modelltests</span></h1>
+      <div class="score" id="score"></div>
+    </div>
+    <nav class="tests" id="tests" aria-label="Modelltest"></nav>
+    <div class="teile" id="teile" role="tablist" aria-label="Teil"></div>
+  </div>
+</header>
+
+<main class="wrap" id="main"></main>
+
+<div class="pop" id="pop" hidden role="dialog" aria-label="Wortbedeutung"></div>
+
+<script src="exams.js"></script>
+<script>
+(function () {
+  const EXAMS = window.EXAMS || [];
+  const WORDS = window.WORDS || {};
+  const TEILE = [
+    { key: "teil1", name: "Teil 1", label: "Zeitungsartikel", range: "1–5" },
+    { key: "teil2", name: "Teil 2", label: "Informationstafel", range: "6–10" },
+    { key: "teil3", name: "Teil 3", label: "E-Mail", range: "11–15" },
+    { key: "teil4", name: "Teil 4", label: "Anzeigen", range: "16–20" }
+  ];
+  const LETTERS = ["a", "b", "c"];
+
+  // surface form -> lemma id
+  const INDEX = {};
+  for (const id in WORDS) {
+    const forms = WORDS[id].forms || [];
+    INDEX[id.toLowerCase()] = INDEX[id.toLowerCase()] || id;
+    forms.forEach(f => { INDEX[String(f).toLowerCase()] = id; });
+  }
+
+  const store = {
+    get(k, d) { try { const v = localStorage.getItem(k); return v ? JSON.parse(v) : d; } catch (e) { return d; } },
+    set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) {} }
+  };
+
+  const state = store.get("a2lesen:v1", { test: 0, teil: 0, answers: {}, checked: {} });
+  if (!EXAMS[state.test]) state.test = 0;
+  const save = () => store.set("a2lesen:v1", state);
+
+  const $ = s => document.querySelector(s);
+  const esc = s => String(s).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+
+  // Turn a German string into tappable word spans
+  const TOKEN = /([A-Za-zÄÖÜäöüß]+)/g;
+  function wz(text) {
+    return String(text).split(TOKEN).map((part, i) => {
+      if (i % 2 === 0) return esc(part);
+      const id = INDEX[part.toLowerCase()];
+      return id
+        ? `<span class="w" data-k="${esc(id)}">${esc(part)}</span>`
+        : `<span class="w nf">${esc(part)}</span>`;
+    }).join("");
+  }
+
+  const exam = () => EXAMS[state.test];
+  const ansKey = (n) => `${exam().id}:${n}`;
+  const checkKey = (t) => `${exam().id}:${t}`;
+
+
+  function teilScore(ex, teilKey) {
+    const t = ex[teilKey]; if (!t) return 0;
+    return t.questions.reduce((s, q) => s + (state.answers[`${ex.id}:${q.n}`] === q.answer ? 1 : 0), 0);
+  }
+
+  function renderTests() {
+    $("#tests").innerHTML = EXAMS.map((ex, i) => `
+      <button class="test-btn" data-test="${i}" aria-pressed="${i === state.test}">
+        <span class="t">${esc(ex.title)}</span>
+        <span class="l"><span class="dots">${[1,2,3,4].map(d => `<i class="${d <= ex.difficulty ? "on" : ""}"></i>`).join("")}</span>${esc(ex.level || "")}</span>
+      </button>`).join("");
+  }
+
+  function renderTeile() {
+    const ex = exam();
+    $("#teile").innerHTML = TEILE.map((t, i) => {
+      const checked = state.checked[`${ex.id}:${t.key}`];
+      const res = checked && ex[t.key] ? `<span class="res">${teilScore(ex, t.key)}/${ex[t.key].questions.length}</span>` : `<small>${t.range}</small>`;
+      return `<button class="teil-btn" role="tab" data-teil="${i}" aria-selected="${i === state.teil}">${t.name} ${res}</button>`;
+    }).join("");
+  }
+
+  function renderScore() {
+    const ex = exam(); if (!ex) { $("#score").textContent = ""; return; }
+    let pts = 0, max = 0, done = 0;
+    TEILE.forEach(t => {
+      if (state.checked[`${ex.id}:${t.key}`] && ex[t.key]) { pts += teilScore(ex, t.key); max += ex[t.key].questions.length; done++; }
+    });
+    if (!done) { $("#score").innerHTML = `20 Aufgaben · 30 Minuten`; return; }
+    const scaled = (pts * 1.25).toLocaleString("de-DE", { maximumFractionDigits: 2 });
+    $("#score").innerHTML = done === 4
+      ? `Ergebnis <b>${pts}/20</b> · ${scaled}/25 Punkte · ${pts >= 12 ? "bestanden ✓" : "noch nicht bestanden"}`
+      : `Bisher <b>${pts}/${max}</b> (${done} von 4 Teilen)`;
+  }
+
+  function optionsBlock(q, checked) {
+    const chosen = state.answers[ansKey(q.n)];
+    const opts = q.options.map((o, i) => {
+      let cls = "opt";
+      if (checked) { if (i === q.answer) cls += " right"; else if (i === chosen) cls += " wrong"; }
+      return `<div class="${cls}">
+        <button class="box" role="radio" aria-checked="${chosen === i}" data-n="${q.n}" data-v="${i}" ${checked ? "disabled" : ""} aria-label="${q.n}${LETTERS[i]}">${LETTERS[i]}</button>
+        <span class="ot">${wz(o)}</span></div>`;
+    }).join("");
+    return `<div class="opts" role="radiogroup">${opts}</div>${verdict(q, chosen, checked, LETTERS[q.answer])}`;
+  }
+
+  function verdict(q, chosen, checked, label) {
+    if (!checked) return "";
+    if (chosen === q.answer) return `<div class="verdict ok">Richtig</div>`;
+    return `<div class="verdict no">${chosen === undefined ? "Nicht beantwortet" : "Falsch"} · richtig ist ${esc(label)}</div>`;
+  }
+
+  function questionList(teil, checked) {
+    return teil.questions.map(q => `
+      <div class="item">
+        <div class="q"><span class="num">${q.n}</span><span>${wz(q.q)}</span></div>
+        ${optionsBlock(q, checked)}
+      </div>`).join("");
+  }
+
+  function teil4Questions(teil, checked) {
+    const ids = teil.ads.map(a => a.id).concat("x");
+    return teil.questions.map(q => {
+      const chosen = state.answers[ansKey(q.n)];
+      const boxes = ids.map(id => {
+        let cls = "box";
+        if (checked) { if (id === q.answer) cls += " right"; else if (id === chosen) cls += " wrong"; }
+        return `<button class="${cls}" role="radio" aria-checked="${chosen === id}" data-n="${q.n}" data-v="${id}" ${checked ? "disabled" : ""} aria-label="${q.n} ${id}">${id}</button>`;
+      }).join("");
+      return `<div class="item">
+        <div class="q"><span class="num">${q.n}</span><span>${wz(q.q)}</span></div>
+        <div class="boxrow" role="radiogroup">${boxes}</div>
+        ${verdict(q, chosen, checked, q.answer === "x" ? "x (keine Anzeige)" : q.answer)}
+      </div>`;
+    }).join("");
+  }
+
+  function readingBlock(key, t) {
+    if (key === "teil1") return `
+      <article class="sheet reading">
+        ${t.source ? `<div class="source">${wz(t.source)}</div>` : ""}
+        <h2 class="headline">${wz(t.headline || "")}</h2>
+        ${(t.paragraphs || []).map(p => `<p>${wz(p)}</p>`).join("")}
+      </article>`;
+    if (key === "teil2") return `
+      <section class="sheet">
+        <h2 class="board-title">${wz(t.place || "Informationstafel")}</h2>
+        <div class="board">
+          ${t.board.map(f => `<div class="floor"><div class="fl">${wz(f.floor)}</div><ul>${f.items.map(it => `<li>${wz(it)}</li>`).join("")}</ul></div>`).join("")}
+        </div>
+      </section>`;
+    if (key === "teil3") {
+      const m = t.email || {};
+      return `
+      <article class="sheet reading">
+        <dl class="mail-head">
+          <dt>Von</dt><dd>${wz(m.from || "")}</dd>
+          <dt>An</dt><dd>${wz(m.to || "")}</dd>
+          <dt>Betreff</dt><dd><strong>${wz(m.subject || "")}</strong></dd>
+        </dl>
+        ${(m.paragraphs || []).map(p => `<p>${wz(p)}</p>`).join("")}
+      </article>`;
+    }
+    return `
+      <section class="ads">
+        ${t.ads.map(a => `<article class="sheet ad"><span class="ad-id">${esc(a.id)}</span><h3>${wz(a.title)}</h3><p>${wz(a.text)}</p></article>`).join("")}
+      </section>`;
+  }
+
+  function renderMain() {
+    const ex = exam();
+    if (!ex) { $("#main").innerHTML = `<p class="empty">Noch keine Tests geladen.</p>`; return; }
+    const T = TEILE[state.teil];
+    const t = ex[T.key];
+    if (!t) { $("#main").innerHTML = `<p class="empty">${esc(T.name)} fehlt in diesem Test.</p>`; return; }
+    const checked = !!state.checked[checkKey(T.key)];
+    const answered = t.questions.filter(q => state.answers[ansKey(q.n)] !== undefined).length;
+    const qs = T.key === "teil4" ? teil4Questions(t, checked) : questionList(t, checked);
+    const next = state.teil < 3 ? `<button class="btn ghost" data-go="${state.teil + 1}">Weiter zu ${TEILE[state.teil + 1].name}</button>` : "";
+    const msg = checked
+      ? `<span class="msg">Ergebnis: <b>${teilScore(ex, T.key)}/${t.questions.length}</b></span>`
+      : `<span class="msg">${answered}/${t.questions.length} angekreuzt</span>`;
+
+    $("#main").innerHTML = `
+      <div class="head">
+        <span class="eyebrow">${esc(ex.title)} · ${esc(T.name)} · ${esc(T.label)}</span>
+        <p class="instruction">${wz(t.instruction || "")}</p>
+        <p class="hint">Tippe auf ein Wort für Bedeutung (EN · TR · DE). Kästchen antippen zum Ankreuzen.</p>
+      </div>
+      <div class="cols">
+        <div>${readingBlock(T.key, t)}</div>
+        <section class="sheet answers">
+          <h2>Aufgaben ${T.range}</h2>
+          ${qs}
+          <div class="actions">
+            ${checked
+              ? `<button class="btn ghost" data-act="reset">Teil wiederholen</button>`
+              : `<button class="btn" data-act="check">Teil prüfen</button>`}
+            ${next}
+            ${msg}
+          </div>
+        </section>
+      </div>`;
+  }
+
+  function render() { renderTests(); renderTeile(); renderMain(); renderScore(); save(); }
+
+  // word popover
+  const pop = $("#pop");
+  let activeEl = null;
+  function closePop() { pop.hidden = true; if (activeEl) activeEl.classList.remove("active"); activeEl = null; }
+  function openPop(el) {
+    const w = WORDS[el.dataset.k]; if (!w) return;
+    if (activeEl) activeEl.classList.remove("active");
+    activeEl = el; el.classList.add("active");
+    pop.innerHTML = `
+      <button class="x" aria-label="Schließen">×</button>
+      <div class="lemma">${esc(w.de || el.dataset.k)}</div>
+      ${w.en ? `<div class="row"><span class="lang">en</span><span>${esc(w.en)}</span></div>` : ""}
+      ${w.tr ? `<div class="row"><span class="lang">tr</span><span>${esc(w.tr)}</span></div>` : ""}
+      ${w.def ? `<div class="def">${esc(w.def)}</div>` : ""}
+      <span class="tag ${w.a2 ? "" : "off"}">${w.a2 ? "Goethe A2 Wortliste" : "nicht in der A2-Liste"}</span>`;
+    pop.hidden = false;
+    const r = el.getBoundingClientRect();
+    const pw = pop.offsetWidth, ph = pop.offsetHeight;
+    const vw = document.documentElement.clientWidth;
+    let left = r.left + r.width / 2 - pw / 2;
+    left = Math.max(16, Math.min(left, vw - pw - 16));
+    let top = r.bottom + 8;
+    if (top + ph > window.innerHeight - 8 && r.top - ph - 8 > 60) top = r.top - ph - 8;
+    pop.style.left = (left + window.scrollX) + "px";
+    pop.style.top = (top + window.scrollY) + "px";
+  }
+
+  document.addEventListener("click", (e) => {
+    const word = e.target.closest(".w");
+    if (word && !word.classList.contains("nf")) { e.stopPropagation(); if (word === activeEl) closePop(); else openPop(word); return; }
+    if (e.target.closest(".x")) { closePop(); return; }
+    if (e.target.closest("#pop")) return;
+    closePop();
+
+    const tb = e.target.closest("[data-test]");
+    if (tb) { state.test = +tb.dataset.test; state.teil = 0; render(); window.scrollTo(0, 0); return; }
+    const pb = e.target.closest("[data-teil]");
+    if (pb) { state.teil = +pb.dataset.teil; render(); window.scrollTo(0, 0); return; }
+    const go = e.target.closest("[data-go]");
+    if (go) { state.teil = +go.dataset.go; render(); window.scrollTo(0, 0); return; }
+    const box = e.target.closest(".box[data-n]");
+    if (box && !box.disabled) {
+      const v = isNaN(+box.dataset.v) ? box.dataset.v : +box.dataset.v;
+      const k = ansKey(box.dataset.n);
+      if (state.answers[k] === v) delete state.answers[k]; else state.answers[k] = v;
+      renderMain(); save(); return;
+    }
+    const act = e.target.closest("[data-act]");
+    if (act) {
+      const T = TEILE[state.teil];
+      if (act.dataset.act === "check") state.checked[checkKey(T.key)] = true;
+      if (act.dataset.act === "reset") {
+        delete state.checked[checkKey(T.key)];
+        exam()[T.key].questions.forEach(q => delete state.answers[ansKey(q.n)]);
+      }
+      render();
+    }
+  });
+  document.addEventListener("keydown", e => { if (e.key === "Escape") closePop(); });
+  window.addEventListener("resize", closePop);
+
+  render();
+})();
+</script>
