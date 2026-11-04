@@ -111,6 +111,13 @@ button, select { font: inherit; color: inherit; }
 .w { cursor: pointer; border-radius: 2px; -webkit-tap-highlight-color: transparent; }
 .w:hover { background: var(--accent-soft); }
 .w.on { background: var(--mark); }
+.w.ph { text-decoration: underline dotted var(--accent); text-decoration-thickness: 1px; text-underline-offset: 3px; }
+.pop .kind { font-size: 10.5px; text-transform: uppercase; letter-spacing: .07em; color: var(--accent); font-weight: 600; }
+.pop .parts { border-top: 1px solid var(--line); margin-top: 4px; padding-top: 6px; display: grid; gap: 3px; }
+.pop .parts .kind { color: var(--muted); }
+.pop .wr { font-size: 13px; line-height: 1.35; }
+.pop .wr b { font-family: var(--f-text); font-size: 14px; }
+.pop .wr span { color: var(--muted); }
 
 /* word popover */
 .pop { position: fixed; z-index: 20; width: min(300px, calc(100vw - 32px)); background: var(--bg); border: 1px solid var(--line); border-radius: 8px; box-shadow: 0 6px 24px rgba(20,25,35,.14); padding: 10px 12px; display: grid; gap: 4px; }
@@ -152,6 +159,7 @@ button, select { font: inherit; color: inherit; }
 <div class="pop" id="pop" hidden role="dialog" aria-label="Wortbedeutung"></div>
 
 <script src="exams.js"></script>
+<script src="phrases.js"></script>
 <script>
 (function () {
   const EXAMS = window.EXAMS || [];
@@ -177,11 +185,60 @@ button, select { font: inherit; color: inherit; }
   const $ = s => document.querySelector(s);
   const esc = s => String(s).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
   const TOKEN = /([A-Za-zÀ-ÖØ-öø-ÿ]+)/g;
-  const wz = text => String(text).split(TOKEN).map((p, i) => {
-    if (i % 2 === 0) return esc(p);
-    const id = INDEX[p.toLowerCase()];
-    return id ? `<span class="w" data-k="${esc(id)}">${esc(p)}</span>` : esc(p);
-  }).join("");
+  // multi-word expressions (phrases.js)
+  function parsePat(str) {
+    const out = []; let gap = 0;
+    str.trim().split(/\s+/).forEach(t => {
+      if (t[0] === "~") { gap = t.length > 1 ? +t.slice(1) : 6; return; }
+      const fin = t[0] === "$"; if (fin) t = t.slice(1);
+      out.push({ alts: new Set(t.split("|")), fin, gap }); gap = 0;
+    });
+    return out;
+  }
+  const PATS = [];
+  (window.PHRASES || []).forEach(ph => ph.p.forEach(s => PATS.push({ ph, pt: parsePat(s) })));
+  PATS.sort((a, b) => b.pt.length - a.pt.length);
+  let OCC = 0, OCCS = {};
+
+  function wz(text) {
+    const parts = String(text).split(TOKEN);
+    const toks = []; let sent = 0;
+    for (let i = 0; i < parts.length; i++) {
+      if (i % 2 === 0) { if (/(^|[^0-9])[.!?]/.test(parts[i])) sent++; continue; }
+      const next = parts[i + 1] || "";
+      const last = i + 1 === parts.length - 1 && !/[0-9]/.test(next);
+      toks.push({ i, w: parts[i].toLowerCase(), sent, fin: /^\s*[,.!?:;“”"]/.test(next) || last });
+    }
+    const used = toks.map(() => -1);
+    const ok = (t, j) => used[j] < 0 && t.alts.has(toks[j].w) && (!t.fin || toks[j].fin);
+    const matchAt = (pt, s) => {
+      if (!ok(pt[0], s)) return null;
+      const res = [s]; let prev = s;
+      for (let k = 1; k < pt.length; k++) {
+        let found = -1;
+        for (let j = prev + 1; j <= prev + 1 + pt[k].gap && j < toks.length; j++) {
+          if (toks[j].sent !== toks[s].sent) break;
+          if (ok(pt[k], j)) { found = j; break; }
+        }
+        if (found < 0) return null;
+        res.push(found); prev = found;
+      }
+      return res;
+    };
+    for (const { ph, pt } of PATS) {
+      for (let s = 0; s < toks.length; s++) {
+        const m = matchAt(pt, s);
+        if (m) { const id = OCC++; m.forEach(k => { used[k] = id; }); OCCS[id] = { ph, words: m.map(k => parts[toks[k].i]) }; }
+      }
+    }
+    const occAt = {}; toks.forEach((t, k) => { if (used[k] >= 0) occAt[t.i] = used[k]; });
+    return parts.map((p, i) => {
+      if (i % 2 === 0) return esc(p);
+      const id = INDEX[p.toLowerCase()], o = occAt[i];
+      if (o !== undefined) return `<span class="w ph" data-o="${o}"${id ? ` data-k="${esc(id)}"` : ""}>${esc(p)}</span>`;
+      return id ? `<span class="w" data-k="${esc(id)}">${esc(p)}</span>` : esc(p);
+    }).join("");
+  }
 
   const exam = () => EXAMS[state.test];
   const teil = () => exam()[TEILE[state.teil]];
@@ -252,17 +309,35 @@ button, select { font: inherit; color: inherit; }
     $("#qs").innerHTML = `<div class="qhead"><div class="nav">${nav}</div>${btn}</div><div class="list">${items}</div>`;
   }
 
-  function render() { renderTop(); renderRead(); renderQs(); save(); }
+  function render() { OCC = 0; OCCS = {}; renderTop(); renderRead(); renderQs(); save(); }
 
   // popover
   const pop = $("#pop");
-  let on = null;
-  function closePop() { pop.hidden = true; if (on) on.classList.remove("on"); on = null; }
+  let on = null, lit = [];
+  function closePop() { pop.hidden = true; lit.forEach(e => e.classList.remove("on")); lit = []; on = null; }
+  function wordRow(surface) {
+    const w = WORDS[INDEX[surface.toLowerCase()]];
+    if (!w) return `<div class="wr"><b>${esc(surface)}</b></div>`;
+    return `<div class="wr"><b>${esc(surface)}</b> <span>${esc(w.de)} –</span> ${esc(w.en || "")}${w.tr ? ` <span>· ${esc(w.tr)}</span>` : ""}</div>`;
+  }
   function openPop(el) {
-    const w = WORDS[el.dataset.k]; if (!w) return;
-    if (on) on.classList.remove("on");
-    on = el; el.classList.add("on");
-    pop.innerHTML = `<button class="x" aria-label="Schließen">×</button>
+    const o = el.dataset.o !== undefined ? OCCS[el.dataset.o] : null;
+    const w = WORDS[el.dataset.k];
+    if (!o && !w) return;
+    lit.forEach(e => e.classList.remove("on"));
+    lit = o ? [...document.querySelectorAll(`.w[data-o="${el.dataset.o}"]`)] : [el];
+    lit.forEach(e => e.classList.add("on"));
+    on = el;
+    if (o) {
+      const ph = o.ph;
+      pop.innerHTML = `<button class="x" aria-label="Schließen">×</button>
+      <div class="kind">Ausdruck</div>
+      <div class="lemma">${esc(ph.de)}</div>
+      ${ph.en ? `<div class="row"><span class="lg">en</span><span>${esc(ph.en)}</span></div>` : ""}
+      ${ph.tr ? `<div class="row"><span class="lg">tr</span><span>${esc(ph.tr)}</span></div>` : ""}
+      ${ph.def ? `<div class="def">${esc(ph.def)}</div>` : ""}
+      <div class="parts"><div class="kind">Einzelwörter</div>${o.words.map(wordRow).join("")}</div>`;
+    } else pop.innerHTML = `<button class="x" aria-label="Schließen">×</button>
       <div class="lemma">${esc(w.de || el.dataset.k)}</div>
       ${w.en ? `<div class="row"><span class="lg">en</span><span>${esc(w.en)}</span></div>` : ""}
       ${w.tr ? `<div class="row"><span class="lg">tr</span><span>${esc(w.tr)}</span></div>` : ""}
@@ -279,7 +354,7 @@ button, select { font: inherit; color: inherit; }
 
   document.addEventListener("click", e => {
     const w = e.target.closest(".w");
-    if (w) { if (w === on) closePop(); else openPop(w); return; }
+    if (w) { if (lit.includes(w)) closePop(); else openPop(w); return; }
     if (e.target.closest(".x")) { closePop(); return; }
     if (e.target.closest("#pop")) return;
     closePop();
