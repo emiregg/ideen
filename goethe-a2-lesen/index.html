@@ -106,6 +106,11 @@ button, select { font: inherit; color: inherit; }
 .boxes .box.wrong { border-color: var(--bad); background: var(--bad-soft); }
 .boxes .box.wrong::before, .boxes .box.wrong::after { background: var(--bad); }
 .sol { padding-left: 26px; font-size: 12px; color: var(--bad); }
+.why { margin-left: 26px; font-size: 13px; line-height: 1.45; color: var(--ink); background: var(--soft); border-radius: 6px; padding: 6px 9px; }
+.focus { font-size: 13px; margin: -4px 0 12px; border: 1px solid var(--line); border-radius: 6px; padding: 6px 10px; }
+.focus summary { cursor: pointer; color: var(--ink); }
+.focus .fk { font-size: 10.5px; text-transform: uppercase; letter-spacing: .07em; color: var(--accent); font-weight: 600; margin-right: 4px; }
+.focus p { margin: 6px 0 2px; color: var(--ink); line-height: 1.5; }
 
 /* tappable words */
 .w { cursor: pointer; border-radius: 2px; -webkit-tap-highlight-color: transparent; }
@@ -160,6 +165,9 @@ button, select { font: inherit; color: inherit; }
 
 <script src="exams.js"></script>
 <script src="phrases.js"></script>
+<script src="wortschatz-1.js"></script>
+<script src="wortschatz-2.js"></script>
+<script src="mix.js"></script>
 <script>
 (function () {
   const EXAMS = window.EXAMS || [];
@@ -167,6 +175,13 @@ button, select { font: inherit; color: inherit; }
   const TEILE = ["teil1", "teil2", "teil3", "teil4"];
   const ABC = ["a", "b", "c"];
 
+  // extra glossaries from the training files: same key adds forms, new key adds the entry
+  (window.WORDS_EXTRA || []).forEach(d => {
+    for (const id in d) {
+      if (WORDS[id]) WORDS[id].forms = [...new Set([...(WORDS[id].forms || []), ...(d[id].forms || [])])];
+      else WORDS[id] = d[id];
+    }
+  });
   const INDEX = {};
   for (const id in WORDS) {
     INDEX[id.toLowerCase()] = INDEX[id.toLowerCase()] || id;
@@ -196,7 +211,7 @@ button, select { font: inherit; color: inherit; }
     return out;
   }
   const PATS = [];
-  (window.PHRASES || []).forEach(ph => ph.p.forEach(s => PATS.push({ ph, pt: parsePat(s) })));
+  (window.PHRASES || []).concat(window.PHRASES_EXTRA || []).forEach(ph => ph.p.forEach(s => PATS.push({ ph, pt: parsePat(s) })));
   PATS.sort((a, b) => b.pt.length - a.pt.length);
   let OCC = 0, OCCS = {};
 
@@ -241,17 +256,29 @@ button, select { font: inherit; color: inherit; }
   }
 
   const exam = () => EXAMS[state.test];
+  const present = ex => TEILE.map((k, i) => i).filter(i => ex[TEILE[i]]);
+  const fixTeil = () => { const p = present(exam()); if (!p.includes(state.teil)) state.teil = p[0]; };
   const teil = () => exam()[TEILE[state.teil]];
   const key = n => `${exam().id}:${n}`;
   const ckey = i => `${exam().id}:${TEILE[i]}`;
   const score = (ex, k) => ex[k].questions.reduce((s, q) => s + (state.answers[`${ex.id}:${q.n}`] === q.answer ? 1 : 0), 0);
 
   function renderTop() {
-    $("#test").innerHTML = EXAMS.map((ex, i) => `<option value="${i}" ${i === state.test ? "selected" : ""}>${esc(ex.title)}</option>`).join("");
-    $("#tabs").innerHTML = TEILE.map((k, i) => `<button class="tab" role="tab" data-teil="${i}" aria-selected="${i === state.teil}"><span class="tl">Teil </span>${i + 1}</button>`).join("");
-    const ex = exam();
+    const groups = [];
+    EXAMS.forEach((ex, i) => {
+      const g = ex.group || "Modelltests";
+      let grp = groups.find(x => x.g === g);
+      if (!grp) groups.push(grp = { g, items: [] });
+      grp.items.push(`<option value="${i}" ${i === state.test ? "selected" : ""}>${esc(ex.title)}${ex.group === "Wortschatz" ? ` · ${esc(ex.level)}` : ""}</option>`);
+    });
+    $("#test").innerHTML = groups.length > 1
+      ? groups.map(x => `<optgroup label="${esc(x.g)}">${x.items.join("")}</optgroup>`).join("")
+      : groups[0].items.join("");
+    const ex = exam(), pres = present(ex);
+    $("#tabs").innerHTML = pres.map(i => `<button class="tab" role="tab" data-teil="${i}" aria-selected="${i === state.teil}"><span class="tl">Teil </span>${i + 1}</button>`).join("");
     let pts = 0, max = 0, done = 0;
-    TEILE.forEach((k, i) => { if (state.checked[ckey(i)]) { pts += score(ex, k); max += ex[k].questions.length; done++; } });
+    pres.forEach(i => { if (state.checked[ckey(i)]) { pts += score(ex, TEILE[i]); max += ex[TEILE[i]].questions.length; done++; } });
+    if (pres.length < 4) { $("#score").innerHTML = done ? `<b>${pts}/${max}</b>` : `${pres.length * 5} Aufgaben`; return; }
     $("#score").innerHTML = done === 4
       ? `<b>${pts}/20</b> · ${(pts * 1.25).toLocaleString("de-DE")}/25 · ${pts >= 12 ? "bestanden" : "nicht bestanden"}`
       : done ? `<b>${pts}/${max}</b> · ${done}/4 Teile` : "20 Aufgaben · 30 Min.";
@@ -260,6 +287,8 @@ button, select { font: inherit; color: inherit; }
   function renderRead() {
     const k = TEILE[state.teil], t = teil();
     let h = `<p class="instr">${wz(t.instruction || "")}</p>`;
+    const f = exam().focus;
+    if (f && f.grammar) h += `<details class="focus" id="focus"><summary><span class="fk">Grammatik</span> ${esc(f.grammar)}</summary>${f.note ? `<p>${esc(f.note)}</p>` : ""}</details>`;
     if (k === "teil1") {
       h += `<div class="text">${t.source ? `<div class="src">${wz(t.source)}</div>` : ""}<h1 class="headline">${wz(t.headline || "")}</h1>${t.paragraphs.map(p => `<p>${wz(p)}</p>`).join("")}</div>`;
     } else if (k === "teil2") {
@@ -300,7 +329,8 @@ button, select { font: inherit; color: inherit; }
           return `<div class="${c}"><button class="box" role="radio" aria-checked="${a === j}" data-n="${q.n}" data-v="${j}" ${checked ? "disabled" : ""}>${ABC[j]}</button><span class="ot">${wz(o)}</span></div>`;
         }).join("")}</div>`;
       }
-      const sol = checked && a !== q.answer && isT4 ? `<div class="sol">Richtig: ${q.answer === "x" ? "x – keine Anzeige" : q.answer}</div>` : "";
+      let sol = checked && a !== q.answer && isT4 ? `<div class="sol">Richtig: ${q.answer === "x" ? "x – keine Anzeige" : q.answer}</div>` : "";
+      if (checked && q.why) sol += `<div class="why">${esc(q.why)}</div>`;
       return `<div class="item${i === cur ? " cur" : ""}" id="q${q.n}"><div class="q"><span class="n">${q.n}</span><span>${wz(q.q)}</span></div>${body}${sol}</div>`;
     }).join("");
     const btn = checked
@@ -377,11 +407,11 @@ button, select { font: inherit; color: inherit; }
       cur = 0; renderTop(); renderQs(); save();
     }
   });
-  $("#test").addEventListener("change", e => { state.test = +e.target.value; state.teil = 0; cur = 0; render(); });
+  $("#test").addEventListener("change", e => { state.test = +e.target.value; state.teil = 0; cur = 0; fixTeil(); render(); });
   document.addEventListener("scroll", closePop, true);
   document.addEventListener("keydown", e => { if (e.key === "Escape") closePop(); });
   window.addEventListener("resize", closePop);
 
-  if (EXAMS.length) render(); else $("#read").textContent = "Keine Tests gefunden.";
+  if (EXAMS.length) { fixTeil(); render(); } else $("#read").textContent = "Keine Tests gefunden.";
 })();
 </script>
