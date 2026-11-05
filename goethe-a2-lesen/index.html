@@ -111,6 +111,9 @@ button, select { font: inherit; color: inherit; }
 .focus summary { cursor: pointer; color: var(--ink); }
 .focus .fk { font-size: 10.5px; text-transform: uppercase; letter-spacing: .07em; color: var(--accent); font-weight: 600; margin-right: 4px; }
 .focus p { margin: 6px 0 2px; color: var(--ink); line-height: 1.5; }
+.focus .tw { margin-top: 8px; border-top: 1px solid var(--line); padding-top: 6px; }
+.focus .tw div { font-family: var(--f-text); font-size: 14px; line-height: 1.6; margin-top: 2px; }
+.focus .sep { color: var(--muted); }
 
 /* tappable words */
 .w { cursor: pointer; border-radius: 2px; -webkit-tap-highlight-color: transparent; }
@@ -165,8 +168,9 @@ button, select { font: inherit; color: inherit; }
 
 <script src="exams.js"></script>
 <script src="phrases.js"></script>
-<script src="wortschatz-1.js"></script>
-<script src="wortschatz-2.js"></script>
+<script src="themen-1.js"></script>
+<script src="themen-2.js"></script>
+<script src="themen-3.js"></script>
 <script src="mix.js"></script>
 <script>
 (function () {
@@ -192,8 +196,9 @@ button, select { font: inherit; color: inherit; }
     get(k, d) { try { const v = localStorage.getItem(k); return v ? JSON.parse(v) : d; } catch (e) { return d; } },
     set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) {} }
   };
-  const state = Object.assign({ test: 0, teil: 0, answers: {}, checked: {} }, store.get("a2lesen:v1", {}));
-  if (!EXAMS[state.test]) state.test = 0;
+  const saved = store.get("a2lesen:v1", null);
+  const state = Object.assign({ test: 0, teil: 0, answers: {}, checked: {} }, saved || {});
+  if (!saved || !EXAMS[state.test]) state.test = Math.max(0, EXAMS.findIndex(e => e.group === "Themen"));
   let cur = 0;
   const save = () => store.set("a2lesen:v1", state);
 
@@ -269,8 +274,10 @@ button, select { font: inherit; color: inherit; }
       const g = ex.group || "Modelltests";
       let grp = groups.find(x => x.g === g);
       if (!grp) groups.push(grp = { g, items: [] });
-      grp.items.push(`<option value="${i}" ${i === state.test ? "selected" : ""}>${esc(ex.title)}${ex.group === "Wortschatz" ? ` · ${esc(ex.level)}` : ""}</option>`);
+      grp.items.push(`<option value="${i}" ${i === state.test ? "selected" : ""}>${esc(ex.title)}</option>`);
     });
+    const ORDER = ["Themen", "Mix", "Modelltests"];
+    groups.sort((a, b) => (ORDER.indexOf(a.g) + 99) % 99 - (ORDER.indexOf(b.g) + 99) % 99);
     $("#test").innerHTML = groups.length > 1
       ? groups.map(x => `<optgroup label="${esc(x.g)}">${x.items.join("")}</optgroup>`).join("")
       : groups[0].items.join("");
@@ -288,7 +295,10 @@ button, select { font: inherit; color: inherit; }
     const k = TEILE[state.teil], t = teil();
     let h = `<p class="instr">${wz(t.instruction || "")}</p>`;
     const f = exam().focus;
-    if (f && f.grammar) h += `<details class="focus" id="focus"><summary><span class="fk">Grammatik</span> ${esc(f.grammar)}</summary>${f.note ? `<p>${esc(f.note)}</p>` : ""}</details>`;
+    if (f && f.grammar) {
+      const tw = (f.words || []).filter(k => WORDS[k]).map(k => `<span class="w" data-k="${esc(k)}">${esc(WORDS[k].de || k)}</span>`).join('<span class="sep"> · </span>');
+      h += `<details class="focus" id="focus"><summary><span class="fk">Grammatik</span> ${esc(f.grammar)}</summary>${f.note ? `<p>${esc(f.note)}</p>` : ""}${tw ? `<div class="tw"><span class="fk">Themenwortschatz</span><div>${tw}</div></div>` : ""}</details>`;
+    }
     if (k === "teil1") {
       h += `<div class="text">${t.source ? `<div class="src">${wz(t.source)}</div>` : ""}<h1 class="headline">${wz(t.headline || "")}</h1>${t.paragraphs.map(p => `<p>${wz(p)}</p>`).join("")}</div>`;
     } else if (k === "teil2") {
